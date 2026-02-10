@@ -17,15 +17,15 @@ def format_response(result: Any) -> str:
     """Formats the result from ticktick-py into a JSON string for MCP."""
     if isinstance(result, (dict, list)):
         try:
-            return json.dumps(result, indent=2, default=str)
+            return json.dumps(result, indent=2, default=str, ensure_ascii=False)
         except TypeError as e:
             logging.error(f"Failed to serialize response object: {e} - Object: {result}", exc_info=True)
-            return json.dumps({"error": "Failed to serialize response", "details": str(e)})
+            return json.dumps({"error": "Failed to serialize response", "details": str(e)}, ensure_ascii=False)
     elif result is None:
-         return json.dumps(None)
+         return json.dumps(None, ensure_ascii=False)
     else:
         logging.warning(f"Formatting unexpected type: {type(result)} - Value: {result}")
-        return json.dumps({"result": str(result)})
+        return json.dumps({"result": str(result)}, ensure_ascii=False)
 
 # --- Decorator for Client Check --- #
 def require_ticktick_client(func):

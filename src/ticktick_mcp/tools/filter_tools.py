@@ -21,9 +21,9 @@ TaskStatus = Literal['uncompleted', 'completed']
 TaskDict = Dict[str, Any]
 
 class PeriodFilter(BaseModel):
+    tz: Optional[ZoneInfo] = Field(None, description="Timezone for date/time interpretation")
     start_date: Optional[datetime.datetime] = Field(None, description="Start date/time for filtering period")
     end_date: Optional[datetime.datetime] = Field(None, description="End date/time for filtering period")
-    tz: Optional[ZoneInfo] = Field(None, description="Timezone for date/time interpretation")
 
     @validator('start_date', 'end_date', pre=True, always=True)
     def format_time(cls, v: Optional[str], values: Dict[str, Any]) -> Optional[datetime.datetime]:
@@ -34,7 +34,7 @@ class PeriodFilter(BaseModel):
         try:
             converted_dt = datetime.datetime.fromisoformat(v)
             if timezone and converted_dt.tzinfo is None:
-                 converted_dt = timezone.localize(converted_dt)
+                 converted_dt = converted_dt.replace(tzinfo=timezone)
             elif not timezone and converted_dt.tzinfo is not None:
                 logging.warning(f"Timezone provided in date string '{v}' but no 'tz' parameter specified. Converting to local time.")
                 converted_dt = converted_dt.astimezone(None).replace(tzinfo=None)
@@ -44,7 +44,7 @@ class PeriodFilter(BaseModel):
                 date_only = datetime.date.fromisoformat(v)
                 dt_start_of_day = datetime.datetime.combine(date_only, datetime.time.min)
                 if timezone:
-                    return timezone.localize(dt_start_of_day)
+                    return dt_start_of_day.replace(tzinfo=timezone)
                 else:
                     return dt_start_of_day
             except ValueError:
@@ -99,7 +99,7 @@ class PeriodFilter(BaseModel):
 
             # Apply filter's timezone if task date is naive
             if self.tz and dt.tzinfo is None:
-                 dt = self.tz.localize(dt)
+                 dt = dt.replace(tzinfo=self.tz)
             # Convert task's timezone to filter's timezone if both exist
             elif self.tz and dt.tzinfo is not None:
                  dt = dt.astimezone(self.tz)
