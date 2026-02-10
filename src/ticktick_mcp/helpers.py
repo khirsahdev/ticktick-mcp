@@ -52,6 +52,14 @@ def _get_all_tasks_from_ticktick() -> List[TaskObject]:
         logging.error("_get_all_tasks_from_ticktick called when client is not initialized.")
         raise ConnectionError("TickTick client not initialized.")
 
+    # Re-sync state from TickTick API to get fresh data
+    # (otherwise state is stale from server startup)
+    try:
+        TickTickClientSingleton.get_client().sync()
+        logging.debug("Re-synced TickTick client state before fetching tasks.")
+    except Exception as e:
+        logging.warning(f"Failed to re-sync TickTick state, using cached state: {e}")
+
     all_tasks = []
     try:
         projects_state = TickTickClientSingleton.get_client().state.get('projects', [])

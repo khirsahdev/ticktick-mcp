@@ -204,10 +204,9 @@ class TaskFilterer:
                 if not client:
                     raise ConnectionError("TickTick client is not available.")
 
-                tasks = await client.task.get_completed(
-                    from_date=start_dt, # Use datetime object
-                    to_date=end_dt,     # Use datetime object
-                    # Removed tz argument as client handles it
+                tasks = client.task.get_completed(
+                    start_dt,   # positional: start
+                    end_dt,     # positional: end
                 )
 
                 logging.debug(f"Retrieved {len(tasks)} completed tasks in date range from API")
