@@ -8,8 +8,28 @@ from ticktick.oauth2 import OAuth2
 # Import config variables and paths
 from .config import CLIENT_ID, CLIENT_SECRET, REDIRECT_URI, USERNAME, PASSWORD, dotenv_dir_path
 
-# Global client variable -> Removed, replaced by singleton
-# ticktick_client: Optional[TickTickClient] = None
+
+class TickTickClientNoSignon(TickTickClient):
+    """
+    Subclass of TickTickClient that skips the username/password signon step
+    when a valid OAuth token is already cached.
+
+    ticktick-py always calls /api/v2/user/signon on init, even with a cached
+    OAuth token. Repeated signon calls trigger TickTick's anti-fraud lockout
+    (HTTP 500). This subclass reuses the cached OAuth access token instead,
+    avoiding the lockout entirely.
+    """
+    def _login(self, username: str, password: str) -> None:
+        token_info = getattr(self.oauth_manager, 'access_token_info', None)
+        if token_info and token_info.get('access_token'):
+            token = token_info['access_token']
+            self.access_token = token
+            self.cookies['t'] = token
+            logging.info("Skipped signon — reusing cached OAuth access token.")
+        else:
+            logging.info("No cached OAuth token found — falling back to signon.")
+            super()._login(username, password)
+
 
 class TickTickClientSingleton:
     """Singleton class to manage the TickTickClient instance."""
@@ -48,7 +68,7 @@ class TickTickClientSingleton:
             auth_client.get_access_token() # Might trigger interactive OAuth flow
 
             logging.info(f"Initializing TickTickClient with username: {USERNAME}")
-            client = TickTickClient(USERNAME, PASSWORD, auth_client)
+            client = TickTickClientNoSignon(USERNAME, PASSWORD, auth_client)
             logging.info(f"TickTick client initialized successfully within singleton.")
             TickTickClientSingleton._instance = client
         except Exception as e:
